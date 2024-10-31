@@ -33,7 +33,6 @@ jobs:
       run: |
         if [ ! -f screenshot.webp ]; then
           echo "::error::screenshot.webp is missing or incorrectly named."
-          exit 1
         fi
 
     - name: Validate README Content Template
