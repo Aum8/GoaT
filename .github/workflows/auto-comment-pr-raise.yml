@@ -57,7 +57,7 @@ jobs:
         fi
 
     - name: Add Comment to Pull Request if Errors Exist
-      if: env.COMMENT_BODY != ""
+      if: ${{ env.COMMENT_BODY != '' }}
       run: |
         COMMENT=$(cat <<EOF
         {
