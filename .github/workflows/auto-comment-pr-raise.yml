@@ -1,0 +1,80 @@
+name: Auto Comment on PR
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Initialize Comment Variable
+      run: echo "COMMENT_BODY=" > $GITHUB_ENV
+
+    - name: Directory Naming Convention Check
+      run: |
+        incorrect_dirs=$(find . -type d -not -path './.git/*' -name '*[A-Z]*' | wc -l)
+        if [ "$incorrect_dirs" -gt 0 ]; then
+          echo "COMMENT_BODY=\$COMMENT_BODY Error: One or more directories are not in kebab-case.%0A" >> $GITHUB_ENV
+        fi
+
+    - name: Check README File Exists
+      run: |
+        if [ ! -f README.md ]; then
+          echo "COMMENT_BODY=\$COMMENT_BODY Error: README.md file is missing from the project directory.%0A" >> $GITHUB_ENV
+        fi
+
+    - name: Check Screenshot Presence and Naming Convention
+      run: |
+        if [ ! -f screenshot.webp ]; then
+          echo "::error::screenshot.webp is missing or incorrectly named."
+          exit 1
+        fi
+
+    - name: Validate README Content Template
+      run: |
+        required_sections=(
+          "<h1 align='center'><b>💥 PROJECT NAME 💥</b></h1>"
+          "Tech Stack Used 🎮"
+          ":zap: Description 📃"
+          ":zap: How to run it? 🕹️"
+          ":zap: Screenshots 📸"
+          "Developed By <b><i>YOUR NAME</i></b> 👦"
+        )
+        missing_sections=()
+        for section in "${required_sections[@]}"; do
+          if ! grep -q "$section" README.md; then
+            missing_sections+=("$section")
+          fi
+        done
+        if [ "${#missing_sections[@]}" -ne 0 ]; then
+          echo "COMMENT_BODY=\$COMMENT_BODY Error: README.md is missing required sections: ${missing_sections[*]}.%0A" >> $GITHUB_ENV
+        fi
+
+    - name: Add Comment to Pull Request if Errors Exist
+      if: env.COMMENT_BODY != ""
+      run: |
+        COMMENT=$(cat <<EOF
+        {
+          "body": "$COMMENT_BODY Thank you for submitting your pull request! We'll review it as soon as possible. For further communication, join our discord server https://discord.gg/tSqtvHUJzE."
+        }
+        EOF
+        )
+        RESPONSE=$(curl -s -o response.json -w "%{http_code}" \
+          -X POST \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+          -d "$COMMENT")
+        cat response.json
+        if [ "$RESPONSE" -ne 201 ]; then
+          echo "Failed to add comment"
+          exit 1
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
