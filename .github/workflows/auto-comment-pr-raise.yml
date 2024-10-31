@@ -32,7 +32,7 @@ jobs:
     - name: Check Screenshot Presence and Naming Convention
       run: |
         if [ ! -f screenshot.webp ]; then
-          echo "::error::screenshot.webp is missing or incorrectly named."
+          echo "COMMENT_BODY=\$COMMENT_BODY Error:screenshot.webp is missing or incorrectly named.%0A" >> $GITHUB_ENV
         fi
 
     - name: Validate README Content Template
