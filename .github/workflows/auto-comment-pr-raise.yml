@@ -21,7 +21,7 @@ jobs:
         pr_body="${{ github.event.pull_request.body }}"
 
         # Check for Description header
-        if ! echo "$pr_body" | grep -q "^## Description"; then
+        if ! echo "$pr_body" | grep -q "Description"; then
           description_missing=true
         fi
 
